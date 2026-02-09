@@ -10,104 +10,144 @@ body{margin:0;padding:16px;font-family:-apple-system;background:#0b0f14;color:#e
 h1{font-size:26px;margin-bottom:8px;}
 h2{font-size:16px;margin-bottom:6px;}
 .card{background:#121826;border-radius:18px;padding:16px;margin-bottom:14px}
-input,select,button{
- width:100%;padding:12px;border-radius:14px;border:none;
- background:#1f2937;color:#fff;margin-top:6px
-}
+input,select,button{width:100%;padding:12px;border-radius:14px;border:none;background:#1f2937;color:#fff;margin-top:6px}
 button{background:#3b82f6;font-weight:600;cursor:pointer}
 .total{font-size:30px;color:#22c55e;font-weight:800}
 .small{font-size:12px;color:#9ca3af;margin-bottom:4px;}
 .red{color:#ef4444}
 .sugestao{background:#1f2937;padding:12px;border-radius:14px;margin-top:8px;}
 .sugestao li{margin-bottom:4px;}
+
+/* Abas */
+.tabs{display:flex;gap:8px;margin-bottom:16px;}
+.tablink{flex:1;padding:12px;border:none;border-radius:12px;background:#1f2937;color:#fff;font-weight:600;cursor:pointer;}
+.tablink.active{background:#3b82f6;}
+.tabcontent{display:none;}
 </style>
 </head>
 <body>
 
 <h1>📊 Meus Investimentos</h1>
 
-<div class="card">
- <div class="small">Patrimônio total</div>
- <div class="total" id="patrimonio">R$ 0,00</div>
+<!-- ABAS -->
+<div class="tabs">
+  <button class="tablink active" onclick="openTab(event,'resumo')">📊 Resumo</button>
+  <button class="tablink" onclick="openTab(event,'caixinhas')">🏦 Caixinhas</button>
+  <button class="tablink" onclick="openTab(event,'ativos')">💹 Ativos</button>
+  <button class="tablink" onclick="openTab(event,'dividendos')">💰 Dividendos</button>
 </div>
 
-<div class="card" id="alertas">✅ Alocação dentro do alvo</div>
+<!-- RESUMO -->
+<div id="resumo" class="tabcontent" style="display:block;">
+  <div class="card">
+    <div class="small">Patrimônio total</div>
+    <div class="total" id="patrimonio">R$ 0,00</div>
+  </div>
 
-<div class="card">
-  <button onclick="render()">🔄 Atualizar Preços</button>
+  <div class="card" id="alertas">✅ Alocação dentro do alvo</div>
+
+  <div class="card">
+    <button onclick="render()">🔄 Atualizar Preços</button>
+  </div>
+
+  <div class="card">
+    <h2>🍕 Alocação por classe</h2>
+    <canvas id="grafPizza"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>📊 % Atual vs % Ideal</h2>
+    <canvas id="grafAlvo"></canvas>
+  </div>
+
+  <div class="card sugestao" id="sugestaoAporte">💡 Sugestão de aporte</div>
 </div>
 
-<div class="card">
- <h2>🍕 Alocação por classe</h2>
- <canvas id="grafPizza"></canvas>
+<!-- CAIXINHAS -->
+<div id="caixinhas" class="tabcontent">
+  <div class="card">
+    <div class="small">Saldo total renda fixa</div>
+    <div class="total" id="saldoRendaFixa">R$ 0,00</div>
+  </div>
+
+  <div class="card">
+    <h2>➕ Aporte caixinha</h2>
+    <select id="caixinha">
+      <option value="emergencia">Reserva de Emergência</option>
+      <option value="oportunidade">Reserva de Oportunidade</option>
+    </select>
+    <input id="valor" type="number" placeholder="Valor do aporte">
+    <button onclick="addAporte()">Adicionar</button>
+  </div>
+
+  <div class="card">
+    <h2 class="red">💸 Saque caixinha</h2>
+    <select id="caixinhaSaque">
+      <option value="emergencia">Reserva de Emergência</option>
+      <option value="oportunidade">Reserva de Oportunidade</option>
+    </select>
+    <input id="valorSaque" type="number" placeholder="Valor do saque">
+    <button onclick="sacar()">Sacar</button>
+  </div>
 </div>
 
-<div class="card">
- <h2>📊 % Atual vs % Ideal</h2>
- <canvas id="grafAlvo"></canvas>
+<!-- ATIVOS -->
+<div id="ativos" class="tabcontent">
+  <div class="card">
+    <h2>💹 Adicionar Ativos</h2>
+    <select id="tipoAtivo">
+      <option value="Ação">Ação</option>
+      <option value="FII">FII</option>
+      <option value="ETF">ETF</option>
+      <option value="Cripto">Cripto</option>
+    </select>
+    <input id="tickerAtivo" type="text" placeholder="Ticker (ex: VALE3, BTC)">
+    <input id="qtdAtivo" type="number" placeholder="Quantidade">
+    <button onclick="addAtivo()">Adicionar Ativo</button>
+  </div>
 </div>
 
-<div class="card sugestao" id="sugestaoAporte">💡 Sugestão de aportes para rebalancear</div>
-
-<h2>🏦 Caixinhas Nubank</h2>
-
-<div class="card">
- <div class="small">Saldo total renda fixa</div>
- <div class="total" id="saldoRendaFixa">R$ 0,00</div>
-</div>
-
-<div class="card">
- <h2>➕ Aporte caixinha</h2>
- <select id="caixinha">
-  <option value="emergencia">Reserva de Emergência</option>
-  <option value="oportunidade">Reserva de Oportunidade</option>
- </select>
- <input id="valor" type="number" placeholder="Valor do aporte">
- <button onclick="addAporte()">Adicionar</button>
-</div>
-
-<div class="card">
- <h2 class="red">💸 Saque caixinha</h2>
- <select id="caixinhaSaque">
-  <option value="emergencia">Reserva de Emergência</option>
-  <option value="oportunidade">Reserva de Oportunidade</option>
- </select>
- <input id="valorSaque" type="number" placeholder="Valor do saque">
- <button onclick="sacar()">Sacar</button>
-</div>
-
-<h2>💹 Adicionar Ativos</h2>
-<div class="card">
-  <select id="tipoAtivo">
-    <option value="Ação">Ação</option>
-    <option value="FII">FII</option>
-    <option value="ETF">ETF</option>
-    <option value="Cripto">Cripto</option>
-  </select>
-  <input id="tickerAtivo" type="text" placeholder="Ticker (ex: VALE3, BTC)">
-  <input id="qtdAtivo" type="number" placeholder="Quantidade">
-  <button onclick="addAtivo()">Adicionar Ativo</button>
+<!-- DIVIDENDOS -->
+<div id="dividendos" class="tabcontent">
+  <div class="card">
+    <h2>💰 Registrar Dividendos</h2>
+    <input id="ativoDiv" type="text" placeholder="Ticker">
+    <input id="valorDiv" type="number" placeholder="Valor recebido">
+    <input id="dataDiv" type="date">
+    <button onclick="addDividendo()">Adicionar</button>
+  </div>
+  <div class="card">
+    <h2>📋 Dividendos Recebidos</h2>
+    <table id="tabelaDiv">
+      <thead><tr><th>Ativo</th><th>Valor (R$)</th><th>Data</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
 // ---------------- CONFIG ----------------
-const TOLERANCIA = 1; // diferença mínima para alerta
-const ALVO = {
-  "Renda Fixa": 35,
-  "FIIs": 30,
-  "Ações": 20,
-  "ETFs": 10,
-  "Criptos": 5
-};
-const APORTE_MENSAL = 300; // R$ por mês para rebalanceamento
+const TOLERANCIA = 1;
+const ALVO = {"Renda Fixa":35,"FIIs":30,"Ações":20,"ETFs":10,"Criptos":5};
+const APORTE_MENSAL = 300;
 
 // ---------------- STORAGE ----------------
 let caixinhas = JSON.parse(localStorage.getItem("caixinhas")||'{"emergencia":0,"oportunidade":0}');
 let ativos = JSON.parse(localStorage.getItem("ativos")||"{}");
+let dividendos = JSON.parse(localStorage.getItem("dividendos")||"[]");
 
 function salvar(){
   localStorage.setItem("caixinhas", JSON.stringify(caixinhas));
   localStorage.setItem("ativos", JSON.stringify(ativos));
+  localStorage.setItem("dividendos", JSON.stringify(dividendos));
+}
+
+// ---------------- ABAS ----------------
+function openTab(evt, tabName){
+  document.querySelectorAll(".tabcontent").forEach(t=>t.style.display="none");
+  document.querySelectorAll(".tablink").forEach(b=>b.classList.remove("active"));
+  document.getElementById(tabName).style.display="block";
+  evt.currentTarget.classList.add("active");
 }
 
 // ---------------- CAIXINHAS ----------------
@@ -138,6 +178,29 @@ function addAtivo(){
   salvar(); render();
   document.getElementById("tickerAtivo").value="";
   document.getElementById("qtdAtivo").value="";
+}
+
+// ---------------- DIVIDENDOS ----------------
+function addDividendo(){
+  let ticker = document.getElementById("ativoDiv").value.trim().toUpperCase();
+  let valor = parseFloat(document.getElementById("valorDiv").value);
+  let data = document.getElementById("dataDiv").value;
+  if(!ticker || !valor || !data) return alert("Preencha todos os campos");
+  dividendos.push({ativo:ticker,valor:valor,data:data});
+  salvar(); renderDivid();
+  document.getElementById("ativoDiv").value="";
+  document.getElementById("valorDiv").value="";
+  document.getElementById("dataDiv").value="";
+}
+
+function renderDivid(){
+  const tbody = document.querySelector("#tabelaDiv tbody");
+  tbody.innerHTML="";
+  dividendos.forEach(d=>{
+    let tr = document.createElement("tr");
+    tr.innerHTML=`<td>${d.ativo}</td><td>R$ ${d.valor.toFixed(2)}</td><td>${d.data}</td>`;
+    tbody.appendChild(tr);
+  });
 }
 
 // ---------------- COTAÇÃO ----------------
@@ -173,38 +236,25 @@ async function render(){
   document.getElementById("patrimonio").innerText="R$ "+total.toLocaleString("pt-BR",{minimumFractionDigits:2});
   document.getElementById("saldoRendaFixa").innerText="R$ "+rendaFixa.toLocaleString("pt-BR",{minimumFractionDigits:2});
 
-  // ---------- GRÁFICOS ----------
+  // Gráfico pizza
   new Chart(document.getElementById("grafPizza"),{
     type:"doughnut",
-    data:{
-      labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
-      datasets:[{
-        data:[rendaFixa,fii,acoes,etf,cripto],
-        backgroundColor:["#22c55e","#3b82f6","#f59e0b","#8b5cf6","#ef4444"]
-      }]
-    },
+    data:{labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],datasets:[{data:[rendaFixa,fii,acoes,etf,cripto],backgroundColor:["#22c55e","#3b82f6","#f59e0b","#8b5cf6","#ef4444"]}]},
     options:{plugins:{legend:{position:"bottom"}}}
   });
 
-  // ---------- PORCENTAGENS ----------
+  // % Atual vs Ideal
   let porcentagens = {};
   for(let c in ALVO){
     porcentagens[c] = total>0 ? ((c==="Renda Fixa"?rendaFixa:c==="FIIs"?fii:c==="Ações"?acoes:c==="ETFs"?etf:cripto)/total*100) : 0;
   }
-
   new Chart(document.getElementById("grafAlvo"),{
     type:"bar",
-    data:{
-      labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
-      datasets:[
-        {label:"% Atual", data:Object.values(porcentagens), backgroundColor:"#3b82f6"},
-        {label:"% Ideal", data:Object.values(ALVO), backgroundColor:"#22c55e"}
-      ]
-    },
+    data:{labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],datasets:[{label:"% Atual", data:Object.values(porcentagens), backgroundColor:"#3b82f6"},{label:"% Ideal", data:Object.values(ALVO), backgroundColor:"#22c55e"}]},
     options:{responsive:true, plugins:{legend:{position:"bottom"}}}
   });
 
-  // ---------- ALERTAS ----------
+  // Alertas
   const divAlertas = document.getElementById("alertas");
   let alertas=[];
   for(let c in ALVO){
@@ -212,49 +262,28 @@ async function render(){
       alertas.push(`${c}: ${porcentagens[c].toFixed(1)}% (alvo ${ALVO[c]}%)`);
     }
   }
-  if(alertas.length>0){
-    divAlertas.innerHTML="⚠️ Desbalanceamento:<br>"+alertas.join("<br>");
-    divAlertas.style.color="#ef4444";
-  } else {
-    divAlertas.innerHTML="✅ Alocação dentro do alvo";
-    divAlertas.style.color="#22c55e";
-  }
+  if(alertas.length>0){divAlertas.innerHTML="⚠️ Desbalanceamento:<br>"+alertas.join("<br>");divAlertas.style.color="#ef4444";}
+  else{divAlertas.innerHTML="✅ Alocação dentro do alvo";divAlertas.style.color="#22c55e";}
 
-  // ---------- SUGESTÃO DE APORTE ----------
+  // Sugestão de aporte mensal
   const divSug = document.getElementById("sugestaoAporte");
   let sugestao = {};
-
-  // Aporte mensal fixo
-  let totalDif = 0;
-  for(let c in ALVO){
-    if(porcentagens[c]<ALVO[c]) totalDif += (ALVO[c]-porcentagens[c]);
-  }
-
-  for(let c in ALVO){
-    if(porcentagens[c]<ALVO[c]){
-      sugestao[c] = ((ALVO[c]-porcentagens[c])/totalDif) * APORTE_MENSAL;
-    }
-  }
-
-  if(Object.keys(sugestao).length===0){
-    divSug.innerHTML="✅ Todas as classes estão no alvo ou acima";
-    divSug.style.color="#22c55e";
-  } else {
+  let totalDif=0;
+  for(let c in ALVO){if(porcentagens[c]<ALVO[c]) totalDif += (ALVO[c]-porcentagens[c]);}
+  for(let c in ALVO){if(porcentagens[c]<ALVO[c]) sugestao[c] = ((ALVO[c]-porcentagens[c])/totalDif)*APORTE_MENSAL;}
+  if(Object.keys(sugestao).length===0){divSug.innerHTML="✅ Todas as classes estão no alvo ou acima";divSug.style.color="#22c55e";}
+  else{
     let html="<strong>💡 Sugestão de aporte mensal (R$ "+APORTE_MENSAL+"):</strong><ul>";
-    for(let c in sugestao){
-      html+=`<li>${c}: R$ ${sugestao[c].toFixed(2)}</li>`;
-    }
-    html+="</ul>";
-    divSug.innerHTML=html;
-    divSug.style.color="#facc15";
+    for(let c in sugestao){html+=`<li>${c}: R$ ${sugestao[c].toFixed(2)}</li>`;}
+    html+="</ul>";divSug.innerHTML=html;divSug.style.color="#facc15";
   }
+
+  renderDivid();
 }
 
-// ---------- EXECUTAR RENDER INICIAL ----------
+// Inicial
 render();
-
-// ---------- ATUALIZAÇÃO AUTOMÁTICA CADA 60s ----------
-setInterval(()=>{ render(); }, 60000);
+setInterval(()=>{ render(); },60000);
 </script>
 </body>
 </html>
