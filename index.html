@@ -4,143 +4,132 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Meus Investimentos</title>
-<link rel="manifest" href="manifest.json">
 
 <style>
-body{font-family:-apple-system;background:#0b0f14;color:#fff;margin:0;padding:20px}
-h1{font-size:24px}
-.card{background:#121826;border-radius:14px;padding:16px;margin-bottom:14px}
-input,select,button{width:100%;padding:10px;border-radius:10px;border:none;margin-top:6px}
-button{background:#1f6fff;color:#fff;font-weight:600}
-.total{font-size:26px;font-weight:bold;color:#4ade80}
-.small{font-size:12px;color:#9ca3af}
-.row{display:flex;gap:8px}
-.row div{flex:1}
-.progress{background:#1f2937;border-radius:10px;height:10px;overflow:hidden}
-.bar{background:#22c55e;height:100%}
-table{width:100%;font-size:11px}
-td{padding:4px}
-canvas{width:100%;height:140px}
-.hidden{display:none}
+:root{
+ --bg:#0b0f14;
+ --card:#121826;
+ --primary:#3b82f6;
+ --green:#22c55e;
+ --text:#e5e7eb;
+ --muted:#9ca3af;
+}
+body{
+ font-family:-apple-system;
+ background:var(--bg);
+ color:var(--text);
+ margin:0;
+ padding:18px;
+}
+h1{font-size:24px;margin-bottom:12px}
+h2{font-size:16px;margin-bottom:8px}
+.card{
+ background:var(--card);
+ border-radius:18px;
+ padding:16px;
+ margin-bottom:14px;
+ box-shadow:0 10px 25px rgba(0,0,0,.35);
+ animation:fade .4s ease;
+}
+@keyframes fade{
+ from{opacity:0;transform:translateY(8px)}
+ to{opacity:1;transform:none}
+}
+.total{
+ font-size:32px;
+ font-weight:800;
+ color:var(--green);
+}
+.small{font-size:12px;color:var(--muted)}
+input,select,button{
+ width:100%;
+ padding:12px;
+ border-radius:14px;
+ border:none;
+ margin-top:6px;
+ background:#1f2937;
+ color:#fff;
+}
+button{
+ background:var(--primary);
+ font-weight:600;
+}
+.progress{
+ background:#1f2937;
+ border-radius:12px;
+ height:12px;
+ overflow:hidden;
+ margin-top:6px;
+}
+.bar{background:linear-gradient(90deg,#22c55e,#4ade80);height:100%;transition:width .6s}
+canvas{width:100%;height:190px}
+.badge{
+ display:inline-block;
+ background:#1f2937;
+ padding:6px 10px;
+ border-radius:999px;
+ font-size:12px;
+ margin-top:6px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="login" class="card">
-  <h1>🔐 Meus Investimentos</h1>
-  <p class="small">Autentique com Face ID para continuar</p>
-  <button onclick="login()">Entrar</button>
-</div>
-
-<div id="app" class="hidden">
-
 <h1>📊 Meus Investimentos</h1>
 
 <div class="card">
-  <div class="small">Total investido</div>
-  <div class="total" id="total">R$ 0,00</div>
+ <div class="small">Patrimônio total</div>
+ <div class="total" id="total">R$ 0,00</div>
+ <div class="badge" id="resumoMes"></div>
 </div>
 
 <div class="card">
-  <div class="small">Definir meta por ativo</div>
-  <input id="metaAtivo" placeholder="Ativo (ex: IVVB11)">
-  <input id="metaValor" type="number" placeholder="Meta em R$">
-  <button onclick="salvarMeta()">Salvar meta</button>
+ <h2>➕ Novo aporte</h2>
+ <input id="valor" type="number" placeholder="Valor (R$)">
+ <input id="ativo" placeholder="Ativo">
+ <select id="tipo">
+  <option>Ações</option>
+  <option>FIIs</option>
+  <option>Renda Fixa</option>
+  <option>Cripto</option>
+  <option>ETF Internacional</option>
+ </select>
+ <button onclick="add()">Salvar aporte</button>
 </div>
 
 <div class="card">
-  <div class="small">Metas</div>
-  <div id="metas"></div>
+ <h2>🎯 Meta de aposentadoria</h2>
+ <input id="metaApos" type="number" placeholder="Meta (R$)">
+ <button onclick="salvarMeta()">Salvar meta</button>
+ <div class="progress"><div class="bar" id="barApos"></div></div>
+ <div class="small" id="txtApos"></div>
 </div>
 
 <div class="card">
-  <div class="small">Novo aporte</div>
-  <input id="valor" type="number" placeholder="Valor (R$)">
-  <input id="ativo" placeholder="Ativo">
-  <select id="tipo">
-    <option>Ações</option>
-    <option>FIIs</option>
-    <option>Renda Fixa</option>
-    <option>Cripto</option>
-    <option>ETF Internacional</option>
-  </select>
-  <button onclick="add()">Adicionar aporte</button>
+ <h2>📈 Evolução do patrimônio</h2>
+ <canvas id="grafLinha"></canvas>
+ <div class="small" id="infoLinha"></div>
 </div>
 
 <div class="card">
-  <div class="small">Histórico</div>
-  <table id="hist"></table>
+ <h2>📊 Distribuição por tipo</h2>
+ <canvas id="grafTipo"></canvas>
+ <div class="small" id="infoTipo"></div>
 </div>
 
+<div class="card">
+ <h2>📅 Comparação anual</h2>
+ <canvas id="grafAno"></canvas>
+ <div class="small" id="infoAno"></div>
 </div>
 
 <script>
-let dados = JSON.parse(localStorage.getItem("dados")||"[]");
-let metas = JSON.parse(localStorage.getItem("metas")||"{}");
+let dados=JSON.parse(localStorage.getItem("dados")||"[]");
+let meta=Number(localStorage.getItem("metaApos")||0);
 
-async function login(){
- if(!window.PublicKeyCredential){
-  alert("Face ID não suportado");
-  liberar();
-  return;
- }
- try{
-  await navigator.credentials.get({
-   publicKey:{
-    challenge:new Uint8Array(32),
-    timeout:60000,
-    userVerification:"required"
-   }
-  });
-  liberar();
- }catch(e){
-  alert("Autenticação necessária");
- }
-}
-
-function liberar(){
- document.getElementById("login").style.display="none";
- document.getElementById("app").classList.remove("hidden");
- render();
-}
-
-function salvar(){ localStorage.setItem("dados",JSON.stringify(dados)); }
-function salvarMetas(){ localStorage.setItem("metas",JSON.stringify(metas)); }
-
-function total(){ return dados.reduce((s,a)=>s+a.valor,0); }
-
-function salvarMeta(){
- let a=metaAtivo.value.toUpperCase();
- let v=Number(metaValor.value);
- if(!a||!v)return;
- metas[a]=v;
- salvarMetas();
- metaAtivo.value=""; metaValor.value="";
- renderMetas();
-}
-
-function renderMetas(){
- let html="";
- Object.keys(metas).forEach(a=>{
-  let atual=dados.filter(d=>d.ativo.toUpperCase()==a)
-   .reduce((s,d)=>s+d.valor,0);
-  let pct=Math.min(atual/metas[a]*100,100);
-  html+=`
-   <div class="small">${a} — R$ ${atual.toLocaleString("pt-BR")}
-   / R$ ${metas[a].toLocaleString("pt-BR")}</div>
-   <div class="progress"><div class="bar" style="width:${pct}%"></div></div>
-  `;
- });
- document.getElementById("metas").innerHTML=html;
-}
-
-function render(){
- totalEl.innerText="R$ "+total().toLocaleString("pt-BR",{minimumFractionDigits:2});
- hist.innerHTML=dados.slice().reverse()
- .map(d=>`<tr><td>${d.data}</td><td>${d.ativo}</td><td>${d.tipo}</td><td>R$ ${d.valor}</td></tr>`).join("");
- renderMetas();
-}
+function salvar(){localStorage.setItem("dados",JSON.stringify(dados));}
+function total(){return dados.reduce((s,a)=>s+a.valor,0);}
 
 function add(){
  let v=Number(valor.value);
@@ -152,12 +141,119 @@ function add(){
   data:new Date().toLocaleDateString("pt-BR")
  });
  salvar();
- valor.value=""; ativo.value="";
+ valor.value="";ativo.value="";
  render();
 }
 
+function salvarMeta(){
+ meta=Number(metaApos.value);
+ localStorage.setItem("metaApos",meta);
+ renderMeta();
+}
+
+function renderMeta(){
+ if(!meta)return;
+ let pct=Math.min(total()/meta*100,100);
+ barApos.style.width=pct+"%";
+ txtApos.innerText=`${pct.toFixed(1)}% da meta atingida`;
+}
+
+function resumoMensal(){
+ let hoje=new Date();
+ let m=String(hoje.getMonth()+1).padStart(2,"0");
+ let y=hoje.getFullYear();
+ let soma=dados.filter(d=>{
+  let [_,mes,ano]=d.data.split("/");
+  return mes==m && ano==y;
+ }).reduce((s,d)=>s+d.valor,0);
+ resumoMes.innerText=`Aportes este mês: R$ ${soma.toLocaleString("pt-BR")}`;
+}
+
+function grafLinha(){
+ let c=grafLinhaEl.getContext("2d");
+ c.clearRect(0,0,320,190);
+ let soma=0,p=[];
+ dados.forEach(d=>{soma+=d.valor;p.push(soma)});
+ let max=Math.max(...p,1);
+ c.beginPath();
+ p.forEach((v,i)=>{
+  let x=i*(320/(p.length-1||1));
+  let y=190-(v/max)*170;
+  i?c.lineTo(x,y):c.moveTo(x,y);
+ });
+ c.strokeStyle="#22c55e";
+ c.lineWidth=3;
+ c.stroke();
+
+ grafLinhaEl.onclick=e=>{
+  let i=Math.round((e.offsetX/320)*(p.length-1));
+  infoLinha.innerText=`Patrimônio acumulado: R$ ${p[i]?.toLocaleString("pt-BR")||""}`;
+ };
+}
+
+function grafTipo(){
+ let tipos={};
+ dados.forEach(d=>tipos[d.tipo]=(tipos[d.tipo]||0)+d.valor);
+ let c=grafTipoEl.getContext("2d");
+ c.clearRect(0,0,320,190);
+ let keys=Object.keys(tipos);
+ let max=Math.max(...Object.values(tipos),1);
+ keys.forEach((k,i)=>{
+  let h=(tipos[k]/max)*160;
+  c.fillStyle="#3b82f6";
+  c.fillRect(i*60+25,190-h,40,h);
+ });
+ grafTipoEl.onclick=e=>{
+  let i=Math.floor(e.offsetX/60);
+  let k=keys[i];
+  if(k)infoTipo.innerText=`${k}: R$ ${tipos[k].toLocaleString("pt-BR")}`;
+ };
+}
+
+function grafAno(){
+ let anos={};
+ dados.forEach(d=>{
+  let a=d.data.split("/")[2];
+  anos[a]=(anos[a]||0)+d.valor;
+ });
+ let c=grafAnoEl.getContext("2d");
+ c.clearRect(0,0,320,190);
+ let keys=Object.keys(anos).sort();
+ let max=Math.max(...Object.values(anos),1);
+ keys.forEach((k,i)=>{
+  let h=(anos[k]/max)*160;
+  c.fillStyle="#22c55e";
+  c.fillRect(i*60+25,190-h,40,h);
+ });
+ grafAnoEl.onclick=e=>{
+  let i=Math.floor(e.offsetX/60);
+  let k=keys[i];
+  if(k)infoAno.innerText=`${k}: R$ ${anos[k].toLocaleString("pt-BR")}`;
+ };
+}
+
+function render(){
+ totalEl.innerText="R$ "+total().toLocaleString("pt-BR",{minimumFractionDigits:2});
+ renderMeta();
+ resumoMensal();
+ grafLinha();
+ grafTipo();
+ grafAno();
+}
+
 const totalEl=document.getElementById("total");
-const hist=document.getElementById("hist");
+const metaApos=document.getElementById("metaApos");
+const barApos=document.getElementById("barApos");
+const txtApos=document.getElementById("txtApos");
+const resumoMes=document.getElementById("resumoMes");
+const grafLinhaEl=document.getElementById("grafLinha");
+const grafTipoEl=document.getElementById("grafTipo");
+const grafAnoEl=document.getElementById("grafAno");
+const infoLinha=document.getElementById("infoLinha");
+const infoTipo=document.getElementById("infoTipo");
+const infoAno=document.getElementById("infoAno");
+
+render();
 </script>
 
 </body>
