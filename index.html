@@ -5,69 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Meus Investimentos</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-:root{
- --bg:#0b0f14;
- --card:#121826;
- --primary:#3b82f6;
- --green:#22c55e;
- --text:#e5e7eb;
- --muted:#9ca3af;
-}
-body{
- font-family:-apple-system;
- background:var(--bg);
- color:var(--text);
- margin:0;
- padding:18px;
-}
-h1{font-size:24px;margin-bottom:12px}
-h2{font-size:16px;margin-bottom:8px}
-.card{
- background:var(--card);
- border-radius:18px;
- padding:16px;
- margin-bottom:14px;
- box-shadow:0 10px 25px rgba(0,0,0,.35);
- animation:fade .4s ease;
-}
-@keyframes fade{
- from{opacity:0;transform:translateY(8px)}
- to{opacity:1;transform:none}
-}
-.total{
- font-size:32px;
- font-weight:800;
- color:var(--green);
-}
-.small{font-size:12px;color:var(--muted)}
+body{margin:0;padding:16px;font-family:-apple-system;background:#0b0f14;color:#e5e7eb}
+h1{font-size:26px}
+h2{font-size:16px}
+.card{background:#121826;border-radius:18px;padding:16px;margin-bottom:14px}
 input,select,button{
- width:100%;
- padding:12px;
- border-radius:14px;
- border:none;
- margin-top:6px;
- background:#1f2937;
- color:#fff;
+ width:100%;padding:12px;border-radius:14px;border:none;
+ background:#1f2937;color:#fff;margin-top:6px
 }
-button{background:var(--primary);font-weight:600}
-.progress{
- background:#1f2937;
- border-radius:12px;
- height:12px;
- overflow:hidden;
- margin-top:6px;
-}
-.bar{background:linear-gradient(90deg,#22c55e,#4ade80);height:100%;transition:width .6s}
-canvas{width:100%;height:190px}
-.badge{
- display:inline-block;
- background:#1f2937;
- padding:6px 10px;
- border-radius:999px;
- font-size:12px;
- margin-top:6px;
-}
+button{background:#3b82f6;font-weight:600}
+.total{font-size:30px;color:#22c55e;font-weight:800}
+.small{font-size:12px;color:#9ca3af}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+td,th{padding:8px;font-size:13px}
+th{color:#9ca3af}
+.red{color:#ef4444}
 </style>
 </head>
 
@@ -75,169 +30,210 @@ canvas{width:100%;height:190px}
 
 <h1>📊 Meus Investimentos</h1>
 
+<!-- TOTAL -->
 <div class="card">
  <div class="small">Patrimônio total</div>
- <div class="total" id="total">R$ 0,00</div>
- <div class="badge" id="resumoMes"></div>
+ <div class="total" id="patrimonio">R$ 0,00</div>
+</div>
+
+<!-- ALERTA DE DESBALANCEAMENTO -->
+<div class="card" id="alertas">✅ Alocação dentro do alvo</div>
+
+<!-- GRÁFICO PIZZA -->
+<div class="card">
+ <h2>🍕 Alocação por classe</h2>
+ <canvas id="grafPizza"></canvas>
+</div>
+
+<!-- GRÁFICO % ATUAL VS % IDEAL -->
+<div class="card">
+ <h2>📊 % Atual vs % Ideal</h2>
+ <canvas id="grafAlvo"></canvas>
+</div>
+
+<!-- ================= CAIXINHAS ================= -->
+<h2>🏦 Caixinhas Nubank</h2>
+
+<div class="card">
+ <div class="small">Saldo total renda fixa</div>
+ <div class="total" id="saldoRendaFixa">R$ 0,00</div>
 </div>
 
 <div class="card">
- <h2>➕ Novo aporte</h2>
- <input id="valor" type="number" placeholder="Valor (R$)">
- <input id="ativo" placeholder="Ativo">
- <select id="tipo">
-  <option>Ações</option>
-  <option>FIIs</option>
-  <option>Renda Fixa</option>
-  <option>Cripto</option>
-  <option>ETF Internacional</option>
+ <h2>➕ Aporte caixinha</h2>
+ <select id="caixinha">
+  <option value="emergencia">Reserva de Emergência</option>
+  <option value="oportunidade">Reserva de Oportunidade</option>
  </select>
- <button onclick="add()">Salvar aporte</button>
+ <input id="valor" type="number" placeholder="Valor do aporte">
+ <input id="mes" type="month">
+ <button onclick="addAporte()">Adicionar</button>
 </div>
 
 <div class="card">
- <h2>🎯 Meta de aposentadoria</h2>
- <div class="small">Meta fixa: R$ 1.000.000</div>
- <div class="progress"><div class="bar" id="barApos"></div></div>
- <div class="small" id="txtApos"></div>
+ <h2 class="red">💸 Saque caixinha</h2>
+ <select id="caixinhaSaque">
+  <option value="emergencia">Reserva de Emergência</option>
+  <option value="oportunidade">Reserva de Oportunidade</option>
+ </select>
+ <input id="valorSaque" type="number" placeholder="Valor do saque">
+ <button onclick="sacar()">Sacar</button>
 </div>
 
-<div class="card">
- <h2>📈 Evolução do patrimônio</h2>
- <canvas id="grafLinha"></canvas>
- <div class="small" id="infoLinha"></div>
-</div>
-
-<div class="card">
- <h2>📊 Comparação mensal</h2>
- <canvas id="grafMes"></canvas>
- <div class="small" id="infoMes"></div>
-</div>
-
-<div class="card">
- <h2>📅 Comparação anual</h2>
- <canvas id="grafAno"></canvas>
- <div class="small" id="infoAno"></div>
-</div>
-
+<!-- ================= SCRIPT ================= -->
 <script>
-const META = 1000000;
-let dados=JSON.parse(localStorage.getItem("dados")||"[]");
+const CDI_ANUAL = 0.1315;
+const DIAS_ANO = 252;
+const TOLERANCIA = 5; // +/-5%
+const ALVO = {"Renda Fixa":40,"FIIs":20,"Ações":25,"ETFs":10,"Criptos":5};
 
-function salvar(){localStorage.setItem("dados",JSON.stringify(dados));}
-function total(){return dados.reduce((s,a)=>s+a.valor,0);}
+let aportes = JSON.parse(localStorage.getItem("aportes")||"[]");
+let ativos = JSON.parse(localStorage.getItem("ativos")||"{}");
 
-function add(){
- let v=Number(valor.value);
- if(!v)return;
- dados.push({
-  valor:v,
-  ativo:ativo.value||"-",
-  tipo:tipo.value,
-  data:new Date().toLocaleDateString("pt-BR")
- });
+function salvar(){
+ localStorage.setItem("aportes",JSON.stringify(aportes));
+ localStorage.setItem("ativos",JSON.stringify(ativos));
+}
+
+// Funções financeiras
+function diasEntre(d){
+ let i=new Date(d+"-01");
+ let h=new Date();
+ return Math.max(1,Math.floor((h-i)/(1000*60*60*24)));
+}
+
+function aliquotaIR(d){
+ if(d<=180)return 0.225;
+ if(d<=360)return 0.20;
+ if(d<=720)return 0.175;
+ return 0.15;
+}
+
+function saldoAtual(v,d){
+ let taxa=CDI_ANUAL/DIAS_ANO;
+ let bruto=v*Math.pow(1+taxa,d);
+ let ir=(bruto-v)*aliquotaIR(d);
+ return bruto-ir;
+}
+
+function saldoRendaFixa(){
+ let t=0;
+ aportes.forEach(a=>t+=saldoAtual(a.valor,diasEntre(a.mes)));
+ return t;
+}
+
+// Funções de aporte/saque
+function addAporte(){
+ let caixinha = document.getElementById("caixinha").value;
+ let valor = parseFloat(document.getElementById("valor").value);
+ let mes = document.getElementById("mes").value;
+ if(!valor || !mes) return alert("Preencha valor e mês");
+ aportes.push({caixinha, valor, mes});
  salvar();
- valor.value="";ativo.value="";
  render();
 }
 
-function renderMeta(){
- let pct=Math.min(total()/META*100,100);
- barApos.style.width=pct+"%";
- txtApos.innerText=`${pct.toFixed(2)}% da meta atingida`;
+function sacar(){
+ let caixinha = document.getElementById("caixinhaSaque").value;
+ let valor = parseFloat(document.getElementById("valorSaque").value);
+ if(!valor) return alert("Preencha valor do saque");
+
+ let totalCaixinha = aportes.filter(a=>a.caixinha===caixinha)
+                            .reduce((s,a)=>s+a.valor,0);
+ if(valor>totalCaixinha) return alert("Saldo insuficiente");
+
+ let restantes = valor;
+ for(let i=aportes.length-1;i>=0 && restantes>0;i--){
+     if(aportes[i].caixinha===caixinha){
+         if(aportes[i].valor<=restantes){
+             restantes-=aportes[i].valor;
+             aportes.splice(i,1);
+         } else {
+             aportes[i].valor-=restantes;
+             restantes=0;
+         }
+     }
+ }
+ salvar();
+ render();
 }
 
-function resumoMensal(){
- let hoje=new Date();
- let m=String(hoje.getMonth()+1).padStart(2,"0");
- let y=hoje.getFullYear();
- let soma=dados.filter(d=>{
-  let [_,mes,ano]=d.data.split("/");
-  return mes==m && ano==y;
- }).reduce((s,d)=>s+d.valor,0);
- resumoMes.innerText=`Aportes este mês: R$ ${soma.toLocaleString("pt-BR")}`;
+// Cotação Yahoo Finance
+async function cotacao(t){
+ try{
+  let r=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${t}.SA`);
+  let j=await r.json();
+  return j.chart.result[0].meta.regularMarketPrice||0;
+ }catch{return 0}
 }
 
-function grafLinha(){
- let c=grafLinhaEl.getContext("2d");
- c.clearRect(0,0,320,190);
- let soma=0,p=[];
- dados.forEach(d=>{soma+=d.valor;p.push(soma)});
- let max=Math.max(...p,1);
- c.beginPath();
- p.forEach((v,i)=>{
-  let x=i*(320/(p.length-1||1));
-  let y=190-(v/max)*170;
-  i?c.lineTo(x,y):c.moveTo(x,y);
- });
- c.strokeStyle="#22c55e";
- c.lineWidth=3;
- c.stroke();
-}
+// Renderização completa
+async function render(){
+ let rendaFixa = saldoRendaFixa();
+ let acoes=0,fii=0,etf=0,cripto=0;
 
-function grafMes(){
- let meses={};
- dados.forEach(d=>{
-  let [_,m,a]=d.data.split("/");
-  let k=`${m}/${a}`;
-  meses[k]=(meses[k]||0)+d.valor;
+ for(let t in ativos){
+  let p=await cotacao(t);
+  let v=p*ativos[t].qtd;
+  if(ativos[t].classe==="Ação")acoes+=v;
+  if(ativos[t].classe==="FII")fii+=v;
+  if(ativos[t].classe==="ETF")etf+=v;
+  if(ativos[t].classe==="Cripto")cripto+=v;
+ }
+
+ let total = rendaFixa + acoes + fii + etf + cripto;
+
+ // Atualiza valores no HTML
+ document.getElementById("patrimonio").innerText="R$ "+total.toLocaleString("pt-BR",{minimumFractionDigits:2});
+ document.getElementById("saldoRendaFixa").innerText="R$ "+rendaFixa.toLocaleString("pt-BR",{minimumFractionDigits:2});
+
+ // Gráfico pizza
+ new Chart(document.getElementById("grafPizza"),{
+  type:"doughnut",
+  data:{
+   labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
+   datasets:[{data:[rendaFixa,fii,acoes,etf,cripto],backgroundColor:["#22c55e","#3b82f6","#f59e0b","#8b5cf6","#ef4444"]}]
+  },
+  options:{plugins:{legend:{position:"bottom"}}}
  });
- let keys=Object.keys(meses);
- let max=Math.max(...Object.values(meses),1);
- let c=grafMesEl.getContext("2d");
- c.clearRect(0,0,320,190);
- keys.forEach((k,i)=>{
-  let h=(meses[k]/max)*160;
-  c.fillStyle="#3b82f6";
-  c.fillRect(i*60+25,190-h,40,h);
- });
- grafMesEl.onclick=e=>{
-  let i=Math.floor(e.offsetX/60);
-  let k=keys[i];
-  if(k)infoMes.innerText=`${k}: R$ ${meses[k].toLocaleString("pt-BR")}`;
+
+ // % atual vs % ideal
+ let porcentagens = {
+   "Renda Fixa": (rendaFixa/total)*100,
+   "FIIs": (fii/total)*100,
+   "Ações": (acoes/total)*100,
+   "ETFs": (etf/total)*100,
+   "Criptos": (cripto/total)*100
  };
-}
 
-function grafAno(){
- let anos={};
- dados.forEach(d=>{
-  let a=d.data.split("/")[2];
-  anos[a]=(anos[a]||0)+d.valor;
+ new Chart(document.getElementById("grafAlvo"),{
+    type:"bar",
+    data:{
+        labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
+        datasets:[
+            {label:"% Atual", data:Object.values(porcentagens), backgroundColor:"#3b82f6"},
+            {label:"% Ideal", data:Object.values(ALVO), backgroundColor:"#22c55e"}
+        ]
+    },
+    options:{responsive:true, plugins:{legend:{position:"bottom"}}}
  });
- let keys=Object.keys(anos).sort();
- let max=Math.max(...Object.values(anos),1);
- let c=grafAnoEl.getContext("2d");
- c.clearRect(0,0,320,190);
- keys.forEach((k,i)=>{
-  let h=(anos[k]/max)*160;
-  c.fillStyle="#22c55e";
-  c.fillRect(i*60+25,190-h,40,h);
- });
- grafAnoEl.onclick=e=>{
-  let i=Math.floor(e.offsetX/60);
-  let k=keys[i];
-  if(k)infoAno.innerText=`${k}: R$ ${anos[k].toLocaleString("pt-BR")}`;
- };
-}
 
-function render(){
- totalEl.innerText="R$ "+total().toLocaleString("pt-BR",{minimumFractionDigits:2});
- renderMeta();
- resumoMensal();
- grafLinha();
- grafMes();
- grafAno();
+ // Alerta de desbalanceamento
+ let alertas = [];
+ for(let classe in ALVO){
+   if(Math.abs(porcentagens[classe]-ALVO[classe])>TOLERANCIA){
+     alertas.push(`${classe}: ${porcentagens[classe].toFixed(1)}% (alvo ${ALVO[classe]}%)`);
+   }
+ }
+ const divAlertas = document.getElementById("alertas");
+ if(alertas.length>0){
+   divAlertas.innerHTML = "⚠️ Desbalanceamento:<br>"+alertas.join("<br>");
+   divAlertas.style.color="#ef4444";
+ } else {
+   divAlertas.innerHTML = "✅ Alocação dentro do alvo";
+   divAlertas.style.color="#22c55e";
+ }
 }
-
-const totalEl=document.getElementById("total");
-const barApos=document.getElementById("barApos");
-const txtApos=document.getElementById("txtApos");
-const resumoMes=document.getElementById("resumoMes");
-const grafLinhaEl=document.getElementById("grafLinha");
-const grafMesEl=document.getElementById("grafMes");
-const grafAnoEl=document.getElementById("grafAno");
-const infoMes=document.getElementById("infoMes");
-const infoAno=document.getElementById("infoAno");
 
 render();
 </script>
