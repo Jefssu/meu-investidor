@@ -8,18 +8,19 @@
 
 <style>
 body{font-family:-apple-system;background:#0b0f14;color:#fff;margin:0;padding:20px}
-h1{font-size:24px;margin-bottom:10px}
+h1{font-size:24px}
 .card{background:#121826;border-radius:14px;padding:16px;margin-bottom:14px}
 input,select,button{width:100%;padding:12px;border-radius:10px;border:none;margin-top:8px}
 button{background:#1f6fff;color:#fff;font-weight:600}
 .total{font-size:28px;font-weight:bold;color:#4ade80}
-.row{display:flex;gap:10px}
-.row div{flex:1}
 .small{font-size:13px;color:#9ca3af}
 .progress{background:#1f2937;border-radius:10px;height:14px;overflow:hidden}
-.bar{background:#22c55e;height:100%;width:0%}
-table{width:100%;font-size:13px;margin-top:10px}
+.bar{background:#22c55e;height:100%}
+.row{display:flex;gap:10px}
+.row div{flex:1}
+table{width:100%;font-size:12px}
 td{padding:4px}
+canvas{width:100%;height:160px}
 </style>
 </head>
 
@@ -30,11 +31,19 @@ td{padding:4px}
 <div class="card">
   <div class="small">Total investido</div>
   <div class="total" id="total">R$ 0,00</div>
+  <div class="progress"><div class="bar" id="barra"></div></div>
 </div>
 
 <div class="card">
-  <div class="small">Meta: R$ 1.000.000</div>
-  <div class="progress"><div class="bar" id="barra"></div></div>
+  <div class="small">Totais por tipo</div>
+  <div class="row small">
+    <div id="acoes">Ações: R$ 0</div>
+    <div id="fiis">FIIs: R$ 0</div>
+  </div>
+  <div class="row small">
+    <div id="rf">Renda Fixa: R$ 0</div>
+    <div id="cripto">Cripto: R$ 0</div>
+  </div>
 </div>
 
 <div class="card">
@@ -47,7 +56,21 @@ td{padding:4px}
     <option>Renda Fixa</option>
     <option>Cripto</option>
   </select>
-  <button onclick="add()">Adicionar</button>
+  <button onclick="add()">Adicionar aporte</button>
+</div>
+
+<div class="card">
+  <div class="small">Evolução do patrimônio</div>
+  <canvas id="grafico"></canvas>
+</div>
+
+<div class="card">
+  <div class="small">Simulador até R$ 1.000.000</div>
+  <input id="aporte" type="number" placeholder="Aporte mensal inicial (R$)">
+  <input id="crescimento" type="number" placeholder="Crescimento do aporte (% a.a.)">
+  <input id="juros" type="number" placeholder="Rentabilidade anual (%)">
+  <button onclick="simular()">Simular</button>
+  <div id="resultado" class="small"></div>
 </div>
 
 <div class="card">
@@ -59,41 +82,83 @@ td{padding:4px}
 let dados = JSON.parse(localStorage.getItem("dados")||"[]");
 const meta = 1000000;
 
-function salvar(){
- localStorage.setItem("dados",JSON.stringify(dados));
-}
+function salvar(){ localStorage.setItem("dados",JSON.stringify(dados)); }
 
-function total(){
- return dados.reduce((s,a)=>s+a.valor,0);
+function total(){ return dados.reduce((s,a)=>s+a.valor,0); }
+
+function totaisPorTipo(){
+ let t={Ações:0,FIIs:0,"Renda Fixa":0,Cripto:0};
+ dados.forEach(d=>t[d.tipo]+=d.valor);
+ return t;
 }
 
 function render(){
- let t = total();
- document.getElementById("total").innerText =
- "R$ "+t.toLocaleString("pt-BR",{minimumFractionDigits:2});
- document.getElementById("barra").style.width =
- Math.min((t/meta)*100,100)+"%";
+ let t=total();
+ totalEl.innerText="R$ "+t.toLocaleString("pt-BR",{minimumFractionDigits:2});
+ barra.style.width=Math.min(t/meta*100,100)+"%";
 
- let h="";
- dados.slice().reverse().forEach(d=>{
-  h+=`<tr><td>${d.data}</td><td>${d.ativo}</td><td>${d.tipo}</td><td>R$ ${d.valor}</td></tr>`;
- });
- document.getElementById("hist").innerHTML=h;
+ let tp=totaisPorTipo();
+ acoes.innerText="Ações: R$ "+tp["Ações"].toLocaleString("pt-BR");
+ fiis.innerText="FIIs: R$ "+tp["FIIs"].toLocaleString("pt-BR");
+ rf.innerText="Renda Fixa: R$ "+tp["Renda Fixa"].toLocaleString("pt-BR");
+ cripto.innerText="Cripto: R$ "+tp["Cripto"].toLocaleString("pt-BR");
+
+ hist.innerHTML=dados.slice().reverse()
+ .map(d=>`<tr><td>${d.data}</td><td>${d.ativo}</td><td>${d.tipo}</td><td>R$ ${d.valor}</td></tr>`).join("");
+
+ desenharGrafico();
 }
 
 function add(){
  let v=Number(valor.value);
- if(!v) return;
+ if(!v)return;
  dados.push({
   valor:v,
   ativo:ativo.value||"-",
   tipo:tipo.value,
   data:new Date().toLocaleDateString("pt-BR")
  });
- salvar();
- valor.value="";ativo.value="";
+ salvar(); valor.value=""; ativo.value="";
  render();
 }
+
+function desenharGrafico(){
+ let c=grafico.getContext("2d");
+ c.clearRect(0,0,300,150);
+ let soma=0,p=[];
+ dados.forEach(d=>{soma+=d.valor;p.push(soma)});
+ let max=Math.max(...p,1);
+ c.beginPath();
+ p.forEach((v,i)=>{
+  let x=i*(300/(p.length-1||1));
+  let y=150-(v/max)*140;
+  i?c.lineTo(x,y):c.moveTo(x,y);
+ });
+ c.strokeStyle="#4ade80"; c.stroke();
+}
+
+function simular(){
+ let ap=Number(aporte.value);
+ let g=Number(crescimento.value)/100;
+ let j=Number(juros.value)/100;
+ if(!ap||!j)return;
+ let total=0,mes=0;
+ while(total<meta){
+  total+=ap;
+  total+=total*(j/12);
+  mes++;
+  if(mes%12===0) ap*=1+g;
+ }
+ resultado.innerText=`Meta atingida em aproximadamente ${Math.ceil(mes/12)} anos.`;
+}
+
+const totalEl=document.getElementById("total");
+const barra=document.getElementById("barra");
+const hist=document.getElementById("hist");
+const acoes=document.getElementById("acoes");
+const fiis=document.getElementById("fiis");
+const rf=document.getElementById("rf");
+const cripto=document.getElementById("cripto");
 
 render();
 </script>
