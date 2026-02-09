@@ -6,7 +6,6 @@
 
 <title>Meus Investimentos</title>
 
-<!-- WEB APP -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
@@ -59,6 +58,12 @@ th{color:#9ca3af}
     <div id="rendaFixaResumo">R$ 0,00</div>
     <div class="small">📊 Alocação</div>
     <div id="alocResumo" style="display:flex;gap:6px;margin-top:4px;"></div>
+
+    <!-- Aporte Mensal Editável -->
+    <div class="small">💸 Aporte Mensal</div>
+    <input type="number" id="aporteMensal" value="300" placeholder="R$" style="margin-bottom:8px;">
+    <button onclick="atualizarAporte()" style="background:#f59e0b;">Atualizar Aporte</button>
+
     <div class="small">💡 Sugestão aporte</div>
     <div id="sugResumo"></div>
   </div>
@@ -147,7 +152,7 @@ th{color:#9ca3af}
 // ================= CONFIG =================
 const TOLERANCIA = 1;
 const ALVO = {"Renda Fixa":35,"FIIs":30,"Ações":20,"ETFs":10,"Criptos":5};
-const APORTE_MENSAL = 300;
+let APORTE_MENSAL = 300;  // agora editável
 
 // ================= STORAGE =================
 let caixinhas = JSON.parse(localStorage.getItem("caixinhas")||'{"emergencia":0,"oportunidade":0}');
@@ -249,6 +254,14 @@ async function render(){
 
   renderDivid();
   document.getElementById("loading").style.display="none";
+}
+
+// ================= FUNÇÃO ATUALIZAR APORTE =================
+function atualizarAporte(){
+  let novo = parseFloat(document.getElementById("aporteMensal").value);
+  if(isNaN(novo) || novo <= 0) return alert("Digite um valor válido para o aporte.");
+  APORTE_MENSAL = novo;
+  render();
 }
 
 // Inicial
