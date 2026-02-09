@@ -91,7 +91,7 @@ button{background:#3b82f6;font-weight:600;cursor:pointer}
 
 <script>
 // ---------------- CONFIG ----------------
-const TOLERANCIA = 5;
+const TOLERANCIA = 1; // diferença mínima para alerta
 const ALVO = {
   "Renda Fixa": 35,
   "FIIs": 30,
@@ -99,6 +99,7 @@ const ALVO = {
   "ETFs": 10,
   "Criptos": 5
 };
+const APORTE_MENSAL = 300; // R$ por mês para rebalanceamento
 
 // ---------------- STORAGE ----------------
 let caixinhas = JSON.parse(localStorage.getItem("caixinhas")||'{"emergencia":0,"oportunidade":0}');
@@ -207,7 +208,7 @@ async function render(){
   const divAlertas = document.getElementById("alertas");
   let alertas=[];
   for(let c in ALVO){
-    if(Math.abs(porcentagens[c]-ALVO[c])>TOLERANCIA){
+    if(Math.abs(porcentagens[c]-ALVO[c]) >= TOLERANCIA){
       alertas.push(`${c}: ${porcentagens[c].toFixed(1)}% (alvo ${ALVO[c]}%)`);
     }
   }
@@ -222,12 +223,16 @@ async function render(){
   // ---------- SUGESTÃO DE APORTE ----------
   const divSug = document.getElementById("sugestaoAporte");
   let sugestao = {};
-  
-  // Se total = 0, usa um valor base inicial para calcular aportes
-  let aporteBase = total>0 ? total : 1000; // você pode alterar o valor inicial
+
+  // Aporte mensal fixo
+  let totalDif = 0;
+  for(let c in ALVO){
+    if(porcentagens[c]<ALVO[c]) totalDif += (ALVO[c]-porcentagens[c]);
+  }
+
   for(let c in ALVO){
     if(porcentagens[c]<ALVO[c]){
-      sugestao[c] = ((ALVO[c]-porcentagens[c])/100) * aporteBase;
+      sugestao[c] = ((ALVO[c]-porcentagens[c])/totalDif) * APORTE_MENSAL;
     }
   }
 
@@ -235,7 +240,7 @@ async function render(){
     divSug.innerHTML="✅ Todas as classes estão no alvo ou acima";
     divSug.style.color="#22c55e";
   } else {
-    let html="<strong>💡 Sugestão de aporte:</strong><ul>";
+    let html="<strong>💡 Sugestão de aporte mensal (R$ "+APORTE_MENSAL+"):</strong><ul>";
     for(let c in sugestao){
       html+=`<li>${c}: R$ ${sugestao[c].toFixed(2)}</li>`;
     }
