@@ -9,17 +9,19 @@
 
 <style>
 body{margin:0;padding:16px;font-family:-apple-system;background:#0b0f14;color:#e5e7eb}
-h1{font-size:26px}
-h2{font-size:16px}
+h1{font-size:26px;margin-bottom:8px;}
+h2{font-size:16px;margin-bottom:6px;}
 .card{background:#121826;border-radius:18px;padding:16px;margin-bottom:14px}
 input,select,button{
  width:100%;padding:12px;border-radius:14px;border:none;
  background:#1f2937;color:#fff;margin-top:6px
 }
-button{background:#3b82f6;font-weight:600}
+button{background:#3b82f6;font-weight:600;cursor:pointer}
 .total{font-size:30px;color:#22c55e;font-weight:800}
-.small{font-size:12px;color:#9ca3af}
+.small{font-size:12px;color:#9ca3af;margin-bottom:4px;}
 .red{color:#ef4444}
+.sugestao{background:#1f2937;padding:12px;border-radius:14px;margin-top:8px;}
+.sugestao li{margin-bottom:4px;}
 </style>
 </head>
 
@@ -34,7 +36,6 @@ button{background:#3b82f6;font-weight:600}
 
 <div class="card" id="alertas">✅ Alocação dentro do alvo</div>
 
-<!-- Botão atualizar preços -->
 <div class="card">
   <button onclick="render()">🔄 Atualizar Preços</button>
 </div>
@@ -49,7 +50,7 @@ button{background:#3b82f6;font-weight:600}
  <canvas id="grafAlvo"></canvas>
 </div>
 
-<div class="card" id="sugestaoAporte">💡 Sugestão de aportes para rebalancear</div>
+<div class="card sugestao" id="sugestaoAporte">💡 Sugestão de aportes para rebalancear</div>
 
 <h2>🏦 Caixinhas Nubank</h2>
 
@@ -65,7 +66,6 @@ button{background:#3b82f6;font-weight:600}
   <option value="oportunidade">Reserva de Oportunidade</option>
  </select>
  <input id="valor" type="number" placeholder="Valor do aporte">
- <input id="mes" type="month">
  <button onclick="addAporte()">Adicionar</button>
 </div>
 
@@ -93,93 +93,56 @@ button{background:#3b82f6;font-weight:600}
 </div>
 
 <script>
-const CDI_ANUAL = 0.1315;
-const DIAS_ANO = 252;
+// ---------------- CONFIG ----------------
 const TOLERANCIA = 5;
-const ALVO = {"Renda Fixa":40,"FIIs":20,"Ações":25,"ETFs":10,"Criptos":5};
+const ALVO = {
+  "Renda Fixa": 35,
+  "FIIs": 30,
+  "Ações": 20,
+  "ETFs": 10,
+  "Criptos": 5
+};
 
-let aportes = JSON.parse(localStorage.getItem("aportes")||"[]");
+// ---------------- STORAGE ----------------
+let caixinhas = JSON.parse(localStorage.getItem("caixinhas")||'{"emergencia":0,"oportunidade":0}');
 let ativos = JSON.parse(localStorage.getItem("ativos")||"{}");
 
 function salvar(){
- localStorage.setItem("aportes",JSON.stringify(aportes));
- localStorage.setItem("ativos",JSON.stringify(ativos));
+  localStorage.setItem("caixinhas", JSON.stringify(caixinhas));
+  localStorage.setItem("ativos", JSON.stringify(ativos));
 }
 
-function diasEntre(d){
- let i=new Date(d+"-01");
- let h=new Date();
- return Math.max(1,Math.floor((h-i)/(1000*60*60*24)));
-}
-
-function aliquotaIR(d){
- if(d<=180)return 0.225;
- if(d<=360)return 0.20;
- if(d<=720)return 0.175;
- return 0.15;
-}
-
-function saldoAtual(v,d){
- let taxa=CDI_ANUAL/DIAS_ANO;
- let bruto=v*Math.pow(1+taxa,d);
- let ir=(bruto-v)*aliquotaIR(d);
- return bruto-ir;
-}
-
-function saldoRendaFixa(){
- let t=0;
- aportes.forEach(a=>t+=saldoAtual(a.valor,diasEntre(a.mes)));
- return t;
-}
-
+// ---------------- CAIXINHAS ----------------
 function addAporte(){
- let caixinha = document.getElementById("caixinha").value;
- let valor = parseFloat(document.getElementById("valor").value);
- let mes = document.getElementById("mes").value;
- if(!valor || !mes) return alert("Preencha valor e mês");
- aportes.push({caixinha, valor, mes});
- salvar();
- render();
+  let c = document.getElementById("caixinha").value;
+  let v = parseFloat(document.getElementById("valor").value);
+  if(!v) return alert("Preencha o valor");
+  caixinhas[c] += v;
+  salvar(); render();
 }
 
 function sacar(){
- let caixinha = document.getElementById("caixinhaSaque").value;
- let valor = parseFloat(document.getElementById("valorSaque").value);
- if(!valor) return alert("Preencha valor do saque");
- let totalCaixinha = aportes.filter(a=>a.caixinha===caixinha).reduce((s,a)=>s+a.valor,0);
- if(valor>totalCaixinha) return alert("Saldo insuficiente");
- let restantes = valor;
- for(let i=aportes.length-1;i>=0 && restantes>0;i--){
-     if(aportes[i].caixinha===caixinha){
-         if(aportes[i].valor<=restantes){
-             restantes-=aportes[i].valor;
-             aportes.splice(i,1);
-         } else {
-             aportes[i].valor-=restantes;
-             restantes=0;
-         }
-     }
- }
- salvar();
- render();
+  let c = document.getElementById("caixinhaSaque").value;
+  let v = parseFloat(document.getElementById("valorSaque").value);
+  if(!v) return alert("Preencha o valor");
+  if(v>caixinhas[c]) return alert("Saldo insuficiente");
+  caixinhas[c]-=v; salvar(); render();
 }
 
+// ---------------- ATIVOS ----------------
 function addAtivo(){
   let tipo = document.getElementById("tipoAtivo").value;
   let ticker = document.getElementById("tickerAtivo").value.trim().toUpperCase();
   let qtd = parseFloat(document.getElementById("qtdAtivo").value);
   if(!ticker || !qtd) return alert("Preencha ticker e quantidade");
-  if(ativos[ticker]){
-    ativos[ticker].qtd += qtd;
-  } else {
-    ativos[ticker] = {classe: tipo, qtd: qtd};
-  }
-  salvar();
-  render();
+  if(ativos[ticker]) ativos[ticker].qtd+=qtd;
+  else ativos[ticker]={classe:tipo,qtd:qtd};
+  salvar(); render();
   document.getElementById("tickerAtivo").value="";
   document.getElementById("qtdAtivo").value="";
 }
 
+// ---------------- COTAÇÃO ----------------
 async function cotacao(t){
   try{
     const criptos = ["BTC","ETH","DOGE","BNB"];
@@ -194,99 +157,98 @@ async function cotacao(t){
   }catch{return 0}
 }
 
-function sugestaoAporte(total, porcentagens, alvo){
-  let sugestao = {};
-  for(let classe in alvo){
-    let atual = porcentagens[classe] || 0;
-    if(atual < alvo[classe]){
-      sugestao[classe] = (alvo[classe]-atual)/100 * total;
-    }
-  }
-  return sugestao;
-}
-
+// ---------------- RENDER ----------------
 async function render(){
- let rendaFixa = saldoRendaFixa();
- let acoes=0,fii=0,etf=0,cripto=0;
- for(let t in ativos){
-   let p = await cotacao(t);
-   let v = p*ativos[t].qtd;
-   if(ativos[t].classe==="Ação")acoes+=v;
-   if(ativos[t].classe==="FII")fii+=v;
-   if(ativos[t].classe==="ETF")etf+=v;
-   if(ativos[t].classe==="Cripto")cripto+=v;
- }
+  let rendaFixa = caixinhas["emergencia"]+caixinhas["oportunidade"];
+  let acoes=0,fii=0,etf=0,cripto=0;
+  for(let t in ativos){
+    let p = await cotacao(t);
+    let v = p*ativos[t].qtd;
+    if(ativos[t].classe==="Ação") acoes+=v;
+    if(ativos[t].classe==="FII") fii+=v;
+    if(ativos[t].classe==="ETF") etf+=v;
+    if(ativos[t].classe==="Cripto") cripto+=v;
+  }
+  let total = rendaFixa+acoes+fii+etf+cripto;
+  document.getElementById("patrimonio").innerText="R$ "+total.toLocaleString("pt-BR",{minimumFractionDigits:2});
+  document.getElementById("saldoRendaFixa").innerText="R$ "+rendaFixa.toLocaleString("pt-BR",{minimumFractionDigits:2});
 
- let total = rendaFixa + acoes + fii + etf + cripto;
+  // ---------- GRÁFICOS ----------
+  new Chart(document.getElementById("grafPizza"),{
+    type:"doughnut",
+    data:{
+      labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
+      datasets:[{
+        data:[rendaFixa,fii,acoes,etf,cripto],
+        backgroundColor:["#22c55e","#3b82f6","#f59e0b","#8b5cf6","#ef4444"]
+      }]
+    },
+    options:{plugins:{legend:{position:"bottom"}}}
+  });
 
- document.getElementById("patrimonio").innerText="R$ "+total.toLocaleString("pt-BR",{minimumFractionDigits:2});
- document.getElementById("saldoRendaFixa").innerText="R$ "+rendaFixa.toLocaleString("pt-BR",{minimumFractionDigits:2});
+  let porcentagens = {
+    "Renda Fixa": (rendaFixa/total)*100,
+    "FIIs": (fii/total)*100,
+    "Ações": (acoes/total)*100,
+    "ETFs": (etf/total)*100,
+    "Criptos": (cripto/total)*100
+  };
 
- new Chart(document.getElementById("grafPizza"),{
-  type:"doughnut",
-  data:{
-   labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
-   datasets:[{data:[rendaFixa,fii,acoes,etf,cripto],backgroundColor:["#22c55e","#3b82f6","#f59e0b","#8b5cf6","#ef4444"]}]
-  },
-  options:{plugins:{legend:{position:"bottom"}}}
- });
-
- let porcentagens = {
-   "Renda Fixa": (rendaFixa/total)*100,
-   "FIIs": (fii/total)*100,
-   "Ações": (acoes/total)*100,
-   "ETFs": (etf/total)*100,
-   "Criptos": (cripto/total)*100
- };
-
- new Chart(document.getElementById("grafAlvo"),{
+  new Chart(document.getElementById("grafAlvo"),{
     type:"bar",
     data:{
-        labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
-        datasets:[
-            {label:"% Atual", data:Object.values(porcentagens), backgroundColor:"#3b82f6"},
-            {label:"% Ideal", data:Object.values(ALVO), backgroundColor:"#22c55e"}
-        ]
+      labels:["Renda Fixa","FIIs","Ações","ETFs","Criptos"],
+      datasets:[
+        {label:"% Atual", data:Object.values(porcentagens), backgroundColor:"#3b82f6"},
+        {label:"% Ideal", data:Object.values(ALVO), backgroundColor:"#22c55e"}
+      ]
     },
     options:{responsive:true, plugins:{legend:{position:"bottom"}}}
- });
+  });
 
- let alertas = [];
- for(let c in ALVO){
-   if(Math.abs(porcentagens[c]-ALVO[c])>TOLERANCIA){
-     alertas.push(`${c}: ${porcentagens[c].toFixed(1)}% (alvo ${ALVO[c]}%)`);
-   }
- }
- const divAlertas = document.getElementById("alertas");
- if(alertas.length>0){
-   divAlertas.innerHTML = "⚠️ Desbalanceamento:<br>"+alertas.join("<br>");
-   divAlertas.style.color="#ef4444";
- } else {
-   divAlertas.innerHTML = "✅ Alocação dentro do alvo";
-   divAlertas.style.color="#22c55e";
- }
+  // ---------- ALERTAS ----------
+  const divAlertas = document.getElementById("alertas");
+  let alertas=[];
+  for(let c in ALVO){
+    if(Math.abs(porcentagens[c]-ALVO[c])>TOLERANCIA){
+      alertas.push(`${c}: ${porcentagens[c].toFixed(1)}% (alvo ${ALVO[c]}%)`);
+    }
+  }
+  if(alertas.length>0){
+    divAlertas.innerHTML="⚠️ Desbalanceamento:<br>"+alertas.join("<br>");
+    divAlertas.style.color="#ef4444";
+  } else {
+    divAlertas.innerHTML="✅ Alocação dentro do alvo";
+    divAlertas.style.color="#22c55e";
+  }
 
- const divSugestao = document.getElementById("sugestaoAporte");
- let sugestao = sugestaoAporte(total, porcentagens, ALVO);
- if(Object.keys(sugestao).length===0){
-   divSugestao.innerHTML = "✅ Todas as classes estão no alvo ou acima";
-   divSugestao.style.color="#22c55e";
- } else {
-   let linhas=[];
-   for(let c in sugestao){
-     linhas.push(`${c}: R$ ${sugestao[c].toFixed(2)}`);
-   }
-   divSugestao.innerHTML = "💡 Sugestão de aporte:<br>"+linhas.join("<br>");
-   divSugestao.style.color="#facc15";
- }
+  // ---------- SUGESTÃO DE APORTE ----------
+  const divSug = document.getElementById("sugestaoAporte");
+  let sugestao = {};
+  for(let c in ALVO){
+    if(porcentagens[c]<ALVO[c]){
+      sugestao[c]=((ALVO[c]-porcentagens[c])/100*total);
+    }
+  }
+  if(Object.keys(sugestao).length===0){
+    divSug.innerHTML="✅ Todas as classes estão no alvo ou acima";
+    divSug.style.color="#22c55e";
+  } else {
+    let html="<strong>💡 Sugestão de aporte:</strong><ul>";
+    for(let c in sugestao){
+      html+=`<li>${c}: R$ ${sugestao[c].toFixed(2)}</li>`;
+    }
+    html+="</ul>";
+    divSug.innerHTML=html;
+    divSug.style.color="#facc15";
+  }
 }
 
+// ---------- EXECUTAR RENDER INICIAL ----------
 render();
 
-// Atualização automática a cada 60 segundos
-setInterval(() => {
-  render();
-}, 60000);
+// ---------- ATUALIZAÇÃO AUTOMÁTICA CADA 60s ----------
+setInterval(()=>{ render(); }, 60000);
 </script>
 </body>
 </html>
