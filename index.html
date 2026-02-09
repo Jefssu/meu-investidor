@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Meus Investimentos</title>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{margin:0;padding:16px;font-family:-apple-system;background:#0b0f14;color:#e5e7eb}
 h1{font-size:26px;margin-bottom:8px;}
@@ -24,7 +22,6 @@ button{background:#3b82f6;font-weight:600;cursor:pointer}
 .sugestao li{margin-bottom:4px;}
 </style>
 </head>
-
 <body>
 
 <h1>📊 Meus Investimentos</h1>
@@ -169,7 +166,9 @@ async function render(){
     if(ativos[t].classe==="ETF") etf+=v;
     if(ativos[t].classe==="Cripto") cripto+=v;
   }
+
   let total = rendaFixa+acoes+fii+etf+cripto;
+
   document.getElementById("patrimonio").innerText="R$ "+total.toLocaleString("pt-BR",{minimumFractionDigits:2});
   document.getElementById("saldoRendaFixa").innerText="R$ "+rendaFixa.toLocaleString("pt-BR",{minimumFractionDigits:2});
 
@@ -186,13 +185,11 @@ async function render(){
     options:{plugins:{legend:{position:"bottom"}}}
   });
 
-  let porcentagens = {
-    "Renda Fixa": (rendaFixa/total)*100,
-    "FIIs": (fii/total)*100,
-    "Ações": (acoes/total)*100,
-    "ETFs": (etf/total)*100,
-    "Criptos": (cripto/total)*100
-  };
+  // ---------- PORCENTAGENS ----------
+  let porcentagens = {};
+  for(let c in ALVO){
+    porcentagens[c] = total>0 ? ((c==="Renda Fixa"?rendaFixa:c==="FIIs"?fii:c==="Ações"?acoes:c==="ETFs"?etf:cripto)/total*100) : 0;
+  }
 
   new Chart(document.getElementById("grafAlvo"),{
     type:"bar",
@@ -225,11 +222,15 @@ async function render(){
   // ---------- SUGESTÃO DE APORTE ----------
   const divSug = document.getElementById("sugestaoAporte");
   let sugestao = {};
+  
+  // Se total = 0, usa um valor base inicial para calcular aportes
+  let aporteBase = total>0 ? total : 1000; // você pode alterar o valor inicial
   for(let c in ALVO){
     if(porcentagens[c]<ALVO[c]){
-      sugestao[c]=((ALVO[c]-porcentagens[c])/100*total);
+      sugestao[c] = ((ALVO[c]-porcentagens[c])/100) * aporteBase;
     }
   }
+
   if(Object.keys(sugestao).length===0){
     divSug.innerHTML="✅ Todas as classes estão no alvo ou acima";
     divSug.style.color="#22c55e";
