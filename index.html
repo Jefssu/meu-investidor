@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meu Investidor</title>
+<link rel="manifest" href="manifest.json">
+
+<style>
+body{font-family:-apple-system;background:#0b0f14;color:#fff;margin:0;padding:20px}
+h1{font-size:24px;margin-bottom:10px}
+.card{background:#121826;border-radius:14px;padding:16px;margin-bottom:14px}
+input,select,button{width:100%;padding:12px;border-radius:10px;border:none;margin-top:8px}
+button{background:#1f6fff;color:#fff;font-weight:600}
+.total{font-size:28px;font-weight:bold;color:#4ade80}
+.row{display:flex;gap:10px}
+.row div{flex:1}
+.small{font-size:13px;color:#9ca3af}
+.progress{background:#1f2937;border-radius:10px;height:14px;overflow:hidden}
+.bar{background:#22c55e;height:100%;width:0%}
+table{width:100%;font-size:13px;margin-top:10px}
+td{padding:4px}
+</style>
+</head>
+
+<body>
+
+<h1>📊 Meu Investidor</h1>
+
+<div class="card">
+  <div class="small">Total investido</div>
+  <div class="total" id="total">R$ 0,00</div>
+</div>
+
+<div class="card">
+  <div class="small">Meta: R$ 1.000.000</div>
+  <div class="progress"><div class="bar" id="barra"></div></div>
+</div>
+
+<div class="card">
+  <div class="small">Novo aporte</div>
+  <input id="valor" type="number" placeholder="Valor (R$)">
+  <input id="ativo" placeholder="Ativo (ex: PETR4)">
+  <select id="tipo">
+    <option>Ações</option>
+    <option>FIIs</option>
+    <option>Renda Fixa</option>
+    <option>Cripto</option>
+  </select>
+  <button onclick="add()">Adicionar</button>
+</div>
+
+<div class="card">
+  <div class="small">Histórico</div>
+  <table id="hist"></table>
+</div>
+
+<script>
+let dados = JSON.parse(localStorage.getItem("dados")||"[]");
+const meta = 1000000;
+
+function salvar(){
+ localStorage.setItem("dados",JSON.stringify(dados));
+}
+
+function total(){
+ return dados.reduce((s,a)=>s+a.valor,0);
+}
+
+function render(){
+ let t = total();
+ document.getElementById("total").innerText =
+ "R$ "+t.toLocaleString("pt-BR",{minimumFractionDigits:2});
+ document.getElementById("barra").style.width =
+ Math.min((t/meta)*100,100)+"%";
+
+ let h="";
+ dados.slice().reverse().forEach(d=>{
+  h+=`<tr><td>${d.data}</td><td>${d.ativo}</td><td>${d.tipo}</td><td>R$ ${d.valor}</td></tr>`;
+ });
+ document.getElementById("hist").innerHTML=h;
+}
+
+function add(){
+ let v=Number(valor.value);
+ if(!v) return;
+ dados.push({
+  valor:v,
+  ativo:ativo.value||"-",
+  tipo:tipo.value,
+  data:new Date().toLocaleDateString("pt-BR")
+ });
+ salvar();
+ valor.value="";ativo.value="";
+ render();
+}
+
+render();
+</script>
+
+</body>
+</html>
